@@ -3,12 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#008ed5">
+  <meta name="theme-color" content="#faf9f4">
   <title>Mrs Happy Chicken</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
+    <header class="page-heading">
+      <h1><span class="brand-egg" aria-hidden="true"></span>mrs happy chicken<span class="brand-dot">.</span></h1>
+      <span class="tagline">a little game of eggs & happiness</span>
+    </header>
     <section class="game-shell" aria-label="Mrs Happy Chicken game">
       <button id="playfield" aria-label="Lay an egg. You can also press the spacebar.">
         <svg id="scene" viewBox="0 0 1000 640" aria-hidden="true">
@@ -61,6 +65,7 @@
       <span class="inside-hint" id="inside-hint">Press space or tap to lay an egg</span>
       <div class="game-controls"><button id="sound" aria-label="Turn sound off" aria-pressed="true">Sound on ♪</button><button id="reset" aria-label="Start again">↺ <span>Start again</span></button></div>
     </section>
+    <p class="play-hint">Press <kbd>space</kbd> or tap the blue screen to lay an egg.</p>
   </main>
   <script src="game.js"></script>
 </body>
