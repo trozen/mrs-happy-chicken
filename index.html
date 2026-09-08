@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#008ed5">
+  <title>Mrs Happy Chicken</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section class="game-shell" aria-label="Mrs Happy Chicken game">
+      <button id="playfield" aria-label="Lay an egg. You can also press the spacebar.">
+        <svg id="scene" viewBox="0 0 1000 640" aria-hidden="true">
+          <defs>
+            <g id="bird-body" stroke="#24251b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M-33 5q-23-15-25-5l8 5q-14 0-10 8l9 2q-11 5-4 10l20-6" fill="#f9ec32"/>
+              <path d="M-13-37q-11-25-2-25l6 10q3-19 9-13l3 12q11-18 16-10 5 17-8 25" fill="#e5232c"/>
+              <path d="m34-26 24 1-18 17 17 18-23-2" fill="#f9ec32"/>
+              <path d="M-42 0C-43-24-26-41-3-41 23-43 42-26 42-2 43 22 28 40 3 40-24 41-41 23-42 0Z" fill="#f9ec32"/>
+              <circle cx="18" cy="-18" r="5" fill="#24251b" stroke="none"/>
+            </g>
+            <path id="bird-leg" d="M0 27v29m0-5-7 5m7-5 7 5" fill="none" stroke="#24251b" stroke-width="4" stroke-linecap="round"/>
+            <g id="bird">
+              <use href="#bird-leg" transform="translate(-18 -6)"/>
+              <use href="#bird-leg" transform="translate(18 0)"/>
+              <use href="#bird-body"/>
+            </g>
+            <g id="bird-step">
+              <use href="#bird-leg" transform="translate(-18 0)"/>
+              <use href="#bird-leg" transform="translate(18 -6)"/>
+              <use href="#bird-body"/>
+            </g>
+            <g id="chick-body" stroke="#24251b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m19-7 10 4-10 5Z" fill="#ffce53"/>
+              <circle r="23" fill="#ffe65c"/>
+              <circle cx="10" cy="-8" r="4" fill="#24251b" stroke="none"/>
+              <circle cx="11" cy="-9.5" r="1.2" fill="#fffbed" stroke="none"/>
+            </g>
+            <path id="chick-leg" d="M0 17v15m0-3-4 3m4-3 4 3" fill="none" stroke="#24251b" stroke-width="2.5" stroke-linecap="round"/>
+            <g id="chick">
+              <use href="#chick-leg" transform="translate(-9 -3)"/>
+              <use href="#chick-leg" transform="translate(9 0)"/>
+              <use href="#chick-body"/>
+            </g>
+            <g id="chick-step">
+              <use href="#chick-leg" transform="translate(-9 0)"/>
+              <use href="#chick-leg" transform="translate(9 -3)"/>
+              <use href="#chick-body"/>
+            </g>
+            <g id="egg"><path d="M0-28C-14-28-25-6-25 9c0 28 50 28 50 0C25-6 14-28 0-28Z" fill="#fffbb0" stroke="#24251b" stroke-width="5"/></g>
+            <g id="cracked-egg"><use href="#egg"/><path d="m-23-2 8 8 7-11 9 11 8-10 8 9 6-8" fill="none" stroke="#24251b" stroke-width="4" stroke-linejoin="round"/></g>
+            <path id="shell-bottom" d="m-24-2 9 8 7-11 9 11 8-10 8 9 6-8c8 43-55 43-47 1Z" fill="#fffbb0" stroke="#24251b" stroke-width="4" stroke-linejoin="round"/>
+            <path id="shell-top" d="M-24-2C-18-38 17-38 24-3l-7 8-8-9-8 10-9-11-7 11Z" fill="#fffbb0" stroke="#24251b" stroke-width="4" stroke-linejoin="round"/>
+          </defs>
+          <g id="flock"></g>
+          <g id="hen"><use id="hen-sprite" href="#bird"/></g>
+        </svg>
+      </button>
+      <div class="score" aria-label="Eggs laid"><span id="count">000</span></div>
+      <span class="inside-hint" id="inside-hint">Press space or tap to lay an egg</span>
+      <div class="game-controls"><button id="sound" aria-label="Turn sound off" aria-pressed="true">Sound on ♪</button><button id="reset" aria-label="Start again">↺ <span>Start again</span></button></div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Mrs Happy Chicken
+
+A small playable browser mockup inspired by the computer game pictured in Peppa Pig.
+
+Open `index.html` directly in a browser, or run:
+
+```sh
+python3 -m http.server 8000
+```
+
+Then visit http://localhost:8000. No dependencies or build step.
+
+The chicken wanders continuously with a two-frame walk cycle, facing her direction of travel. Press space or tap the blue play area to lay an egg: she hops to a random nearby spot as the egg appears at takeoff, then lands and continues in the hop direction until reaching the play area edge. Eggs stay behind, shake from 1.3 seconds, and crack after about two seconds. The cap pops off and a small chick emerges, then wanders independently with its own two-frame walk cycle: stick legs alternate vertically while the body stays level. Chicks emerge at their final small size and never grow and use a simple yellow circle with a short golden beak, bright black eye, dark outline, and short stick legs. Sound and restart controls sit at the bottom of the play area. At most 100 eggs/chicks remain visible to keep long sessions lightweight.
+
+## Reference and scope
+
+- [Official cartoon clip: Peppa wants to play Happy Mrs Chicken](https://www.youtube.com/watch?v=YzWuRnymr0c)
+- [Official cartoon clip: Peppa teaches Grandpa about computers](https://www.youtube.com/watch?v=BQ3Q9tbsKxE)
+- [Description of the in-universe game](https://peppapig.fandom.com/wiki/Happy_Mrs._Chicken)
+
+## Verified visual reference
+
+[Mummy Pig at Work episode worksheet, pages 5–6](https://languageadvisor.net/wp-content/uploads/2022/04/Peppa.Pig_.S01E07.Mummy_.Pig_.at_.Work_.pdf) contains actual cartoon close-ups: a round yellow chicken with heavy dark outlines, red comb and stick feet; cream eggs with dark outlines; a bright blue playfield; and white three-digit scores (006, 030, 046) in a dark blue oval. The later frames show cracked shells and a screen full of similarly sized chickens.
+
+The current SVG drawing, egg shapes, colours, score, cracked shells, and hatchling size follow those stills. Artwork is drawn in SVG and sound is generated in the browser. No cartoon images or audio are bundled.
+
+## Motion reference
+
+Inspected the actual frames of [this official compilation at 00:49–00:52](https://www.youtube.com/watch?v=YzWuRnymr0c&t=49s), in its opening **Mummy Pig's Book** episode. Despite the upload title, this is not Mummy Pig at Work.
+
+- The hen jumps between positions in a single frame, always facing left; she does not glide along a path.
+- Each lay lifts the hen briefly, exposing an egg directly underneath. Eggs stay where they were laid.
+- The close-up shows roughly three eggs per second.
+- Around 00:50.5, an egg cracks, its cap lifts and falls to the side, and a small chicken emerges from the lower shell.
+- The later wide shot shows a flock of large chickens.
+
+At the user's request, the implementation uses continuous wandering and two alternating leg poses instead of the clip's jumps between locations. Each 320 ms laying hop travels 80–160 game units (8–16% of the playfield width) to a random in-bounds destination, leaving the egg at takeoff. Walking pauses during the hop; the chicken then resumes her route. Reduced-motion mode omits the leg cycling, bob, and lift while retaining movement. Incubation lasts two seconds, with a shake during its final 0.7 seconds, followed by crack, cap, emergence, and independent chick walking stages. Reduced-motion mode also omits egg shaking and chick leg cycling. Exact incubation/emergence durations and spacing are approximations across edited shots. The synthesized sound is still a placeholder; audio has not been matched. Unlike the later episode's end sequence, this prototype continues playing rather than switching to a high-score screen.
+
+Both adult and chick walk poses lift the feet vertically while keeping their bodies level. The adult uses a modest six-unit lift so both feet remain visible.

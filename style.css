@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+:root { font-family: Arial, sans-serif; background: #008ed5; color: white; }
+body { margin: 0; }
+main { width: 100%; height: 100svh; }
+.game-shell { position: relative; width: 100%; height: 100%; overflow: hidden; }
+#playfield { display: block; width: 100%; height: 100%; border: 0; background: transparent; padding: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#scene { display: block; width: 100%; height: 100%; }
+.score { position: absolute; top: 5%; right: 6%; background: #006a9f; border-radius: 50%; padding: 4px 18px; font-size: clamp(32px, 4.5vw, 58px); font-weight: normal; font-variant-numeric: tabular-nums; pointer-events: none; }
+.inside-hint { position: absolute; bottom: 12%; width: 100%; text-align: center; font-size: 15px; pointer-events: none; opacity: .8; transition: opacity .2s; }
+.playing .inside-hint { opacity: 0; }
+.game-controls { position: absolute; bottom: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; }
+.game-controls button { pointer-events: auto; font: 12px Arial, sans-serif; padding: 14px 10px; color: white; background: transparent; border: 0; cursor: pointer; opacity: .55; }
+.game-controls button:hover, .game-controls button:focus-visible { opacity: 1; }
+button:focus-visible { outline: 2px solid white; outline-offset: -5px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
