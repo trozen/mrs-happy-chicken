@@ -187,6 +187,14 @@
       ChickenMotion.step(birds, dt);
       const alternateStep = walking && !reducedMotion && Math.floor(hen.walkTime / .14) % 2 === 1;
       $('hen-sprite').setAttribute('href', alternateStep ? '#bird-step' : '#bird');
+      // Switch between open and closed poses, on a slower cycle than the feet.
+      const beakClosure = walking && !reducedMotion
+        ? Math.floor(hen.walkTime / .35) % 2 : 0;
+      // Build the halves closed and open them around a hinge inside the head.
+      // Their back corners stay behind the body throughout the rotation.
+      const beakAngle = 28 * (1 - beakClosure);
+      $('beak-upper').setAttribute('transform', `rotate(${-beakAngle} 30 -8)`);
+      $('beak-lower').setAttribute('transform', `rotate(${beakAngle} 30 -8)`);
       // Follow an arc to a nearby landing spot, leaving the egg at takeoff.
       const lift = reducedMotion ? 0 : -42 * 4 * hopProgress * (1 - hopProgress);
       $('hen').setAttribute('transform', `translate(${hen.x} ${hen.y + lift}) scale(${hen.direction} 1)`);
