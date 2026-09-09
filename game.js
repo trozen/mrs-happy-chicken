@@ -32,17 +32,9 @@
     } catch { /* Play remains available if browser audio is unavailable. */ }
   }
 
-  // Wander toward open space, keeping a little separation from existing eggs.
+  // Short, uniformly chosen headings give all directions a fair turn.
   function nextSpot() {
-    let best, clearance = -1;
-    for (let i = 0; i < 35; i++) {
-      const spot = { x: 100 + Math.random() * 800, y: 150 + Math.random() * 350 };
-      const nearest = Math.min(Math.hypot(spot.x - hen.x, spot.y - hen.y),
-        ...eggs.map(egg => Math.hypot(spot.x - egg.x, spot.y - egg.y)));
-      if (nearest > clearance) { best = spot; clearance = nearest; }
-      if (nearest > 110) break;
-    }
-    return best;
+    return ChickenMotion.wanderTarget(hen, 70, 140);
   }
 
   function use(href, parent) {
@@ -50,7 +42,7 @@
     node.setAttribute('href', href); parent.append(node); return node;
   }
 
-  const chickSpot = () => ({ x: 65 + Math.random() * 870, y: 120 + Math.random() * 410 });
+  const chickSpot = bird => ChickenMotion.wanderTarget(bird, 55, 110);
 
   function hopDestination() {
     for (let attempt = 0; attempt < 32; attempt++) {
@@ -136,7 +128,7 @@
       }
       const walking = !wasHopping && layAge >= layDuration;
       const birds = eggs.filter(egg => activeTime - egg.born >= 3.4).map(egg => egg.walker);
-      birds.forEach(bird => { bird.target ||= chickSpot(); });
+      birds.forEach(bird => { bird.target ||= chickSpot(bird); });
       if (!hen.hop) {
         hen.target ||= nextSpot();
         birds.unshift(hen);

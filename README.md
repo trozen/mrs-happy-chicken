@@ -40,6 +40,8 @@ Both adult and chick walk poses lift the feet vertically while keeping their bod
 
 ## Spacing and depth
 
+Wandering chooses a uniform random angle and a short distance (70–140 units for the mother, 55–110 for chicks), with outward directions reflected inward near edges. This avoids the horizontal bias of choosing destinations across a wide rectangle. Post-hop travel still continues in the landing direction.
+
 Birds can bunch up, overlap slightly, and nudge each other. A narrow soft avoidance zone surrounds smaller circular cores that cannot pass through each other. The mother has 24 times a chick’s weight and yields much less, so she pushes chicks forward and aside while mostly holding her course. Chicks share contact displacement evenly. Birds stay within the play area. Airborne hops can pass over birds, prefer an open landing spot, and rejoin collision handling on landing. Eggs and shells remain decorative rather than blocking movement.
 
 Drawing order follows ground-level foot positions: birds lower on the screen appear in front. Hop height does not change depth, and hatched chicks sort by their current location rather than their original egg location.

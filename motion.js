@@ -1,5 +1,16 @@
 // Circular body bounds keep separation independent of the two walking poses.
 (() => {
+  function wanderTarget(bird, minDistance, maxDistance, random = Math.random) {
+    // Pick a heading first: sampling positions in a wide rectangle biases travel.
+    const angle = random() * Math.PI * 2;
+    const distance = minDistance + random() * (maxDistance - minDistance);
+    let dx = Math.cos(angle) * distance, dy = Math.sin(angle) * distance;
+    const { left, right, top, bottom } = bird.bounds;
+    if (bird.x + dx < left || bird.x + dx > right) dx = -dx;
+    if (bird.y + dy < top || bird.y + dy > bottom) dy = -dy;
+    return { x: bird.x + dx, y: bird.y + dy };
+  }
+
   function clamp(bird) {
     const { left, right, top, bottom } = bird.bounds;
     bird.x = Math.max(left, Math.min(right, bird.x));
@@ -83,7 +94,7 @@
     }
   }
 
-  const api = { step, separate };
+  const api = { step, separate, wanderTarget };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else globalThis.ChickenMotion = api;
 })();

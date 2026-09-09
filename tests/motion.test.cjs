@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { step } = require('../motion.js');
+const { step, wanderTarget } = require('../motion.js');
 
 function bird(x, y, target, adult = false) {
   return { x, y, target, radius: adult ? 40 : 19, mass: adult ? 24 : 1,
@@ -19,6 +19,34 @@ function checkSpace(birds, tolerance = .1) {
     });
   });
 }
+
+test('wandering distributes headings evenly instead of favouring the wide axis', () => {
+  let seed = 42;
+  const random = () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
+  const bins = Array(8).fill(0);
+  const hen = bird(500, 325, null, true);
+  for (let i = 0; i < 16000; i++) {
+    const target = wanderTarget(hen, 70, 140, random);
+    const dx = target.x - hen.x, dy = target.y - hen.y;
+    const angle = (Math.atan2(dy, dx) + 2 * Math.PI) % (2 * Math.PI);
+    bins[Math.floor(angle / (Math.PI / 4))]++;
+    assert.ok(Math.hypot(dx, dy) >= 70 && Math.hypot(dx, dy) <= 140);
+  }
+  bins.forEach(count => assert.ok(count > 1800 && count < 2200));
+});
+
+test('near edges headings turn inward without clipping travel to the boundary', () => {
+  for (const x of [65, 70, 930, 935]) {
+    for (const y of [120, 125, 525, 530]) {
+      const hen = bird(x, y, null, true);
+      for (let i = 0; i < 32; i++) {
+        const target = wanderTarget(hen, 70, 140, () => i / 32);
+        assert.ok(target.x >= 65 && target.x <= 935 && target.y >= 120 && target.y <= 530);
+        assert.ok(Math.hypot(target.x - x, target.y - y) >= 69.99);
+      }
+    }
+  }
+});
 
 test('head-on adult and chick steer past each other without crossing bodies', () => {
   const birds = [bird(250, 320, { x: 750, y: 320 }, true), bird(750, 320, { x: 250, y: 320 })];
