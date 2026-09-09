@@ -166,8 +166,8 @@
             tossed ? 'translate(43 15) rotate(110)' : 'translate(12 -35) rotate(25)');
         }
         if (emerging) {
-          if (hatched) wander(egg.walker, chickSpot, 85, dt);
-          const stepping = hatched && !reducedMotion && Math.floor(egg.walker.walkTime / .12) % 2 === 1;
+          if (hatched) wander(egg.walker, chickSpot, 65, dt);
+          const stepping = hatched && !reducedMotion && Math.floor(egg.walker.walkTime / .16) % 2 === 1;
           egg.chick.setAttribute('href', stepping ? '#chick-step' : '#chick');
           const size = .85;
           const x = egg.walker.x - egg.x;
