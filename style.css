@@ -6,14 +6,16 @@ main { width: 100%; max-width: 1080px; }
 .game-shell { position: relative; width: 100%; aspect-ratio: 1000 / 640; overflow: hidden; background: #008ed5; color: white; border-radius: 22px; box-shadow: 0 6px 0 #e8e7df, 0 16px 35px #424b3910; }
 #playfield { display: block; width: 100%; height: 100%; border: 0; border-radius: inherit; background: transparent; padding: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 #scene { display: block; width: 100%; height: 100%; }
-.score { display: none; position: absolute; top: 5%; right: 6%; background: rgb(0 94 141 / 75%); border-radius: 50%; padding: 4px 18px; font-family: "Comic Neue", "Comic Sans MS", cursive; font-size: clamp(32px, 4.5vw, 58px); font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
+.score { display: none; position: absolute; top: 12px; right: 16px; background: rgb(0 94 141 / 75%); border-radius: 50%; padding: 4px 18px; font-family: "Comic Neue", "Comic Sans MS", cursive; font-size: clamp(32px, 4.5vw, 58px); font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
 .playing .score { display: block; }
-.input-hint { position: absolute; bottom: 6%; left: 50%; transform: translateX(-50%); width: clamp(300px, 45%, 480px); max-width: 90%; pointer-events: none; }
+.input-hint { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: clamp(300px, 45%, 480px); max-width: 90%; pointer-events: none; }
 .input-hint svg { display: block; width: 100%; height: auto; }
 .playing .input-hint { display: none; }
-.game-controls { position: absolute; bottom: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; }
-.game-controls button { pointer-events: auto; display: grid; place-items: center; width: 54px; height: 54px; padding: 8px; color: #005b83; background: #fffbed; border: 3px solid #005b83; border-radius: 50%; cursor: pointer; box-shadow: 0 3px 0 #005b8355; touch-action: manipulation; }
-.game-controls button:hover { background: #ffdf57; }
+.game-controls { position: absolute; top: 12px; left: 16px; display: flex; gap: 8px; pointer-events: none; }
+.game-controls button { pointer-events: auto; display: grid; place-items: center; width: 54px; height: 54px; padding: 8px; color: #005b83; background: #fffbed; border: 3px solid #005b83; border-radius: 50%; cursor: pointer; box-shadow: 0 3px 0 #005b8355; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) and (pointer: fine) {
+  .game-controls button:hover { background: #ffdf57; }
+}
 .game-controls button:active { transform: translateY(2px); box-shadow: none; }
 .game-controls svg { width: 100%; height: 100%; }
 .sound-muted { display: none; }
@@ -29,3 +31,17 @@ main { width: 100%; max-width: 1080px; }
   .input-hint { width: 360px; bottom: 80px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.game-controls button[hidden] { display: none; }
+.fullscreen-exit { display: none; }
+#fullscreen[aria-pressed="true"] .fullscreen-enter { display: none; }
+#fullscreen[aria-pressed="true"] .fullscreen-exit { display: block; }
+:root:fullscreen { width: 100%; height: 100dvh; overflow: hidden; background: #008ed5; }
+:root:fullscreen body { padding: 0; width: 100%; height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+:root:fullscreen main { width: 100%; height: 100%; min-height: 0; max-width: none; }
+:root:fullscreen .game-shell { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+:root:fullscreen .game-controls { top: max(12px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); }
+:root:fullscreen .score { top: max(12px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); }
+@media (max-width: 360px) {
+  .game-controls button { width: 44px; height: 44px; padding: 6px; }
+}

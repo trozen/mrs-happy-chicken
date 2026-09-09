@@ -169,6 +169,26 @@
     $('sound').setAttribute('aria-label', sound ? 'Turn sound off' : 'Turn sound on');
     $('sound').setAttribute('aria-pressed', String(sound));
   });
+  const fullscreenButton = $('fullscreen');
+  fullscreenButton.hidden = !document.fullscreenEnabled || !document.documentElement.requestFullscreen;
+  const syncFullscreen = () => {
+    const active = document.fullscreenElement === document.documentElement;
+    fullscreenButton.setAttribute('aria-pressed', String(active));
+    fullscreenButton.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+  };
+  document.addEventListener('fullscreenchange', syncFullscreen);
+  fullscreenButton.addEventListener('click', async () => {
+    fullscreenButton.disabled = true;
+    try {
+      if (document.fullscreenElement === document.documentElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      // A browser or embedding page may deny fullscreen; keep the game playable.
+    } finally {
+      syncFullscreen();
+      fullscreenButton.disabled = false;
+    }
+  });
   $('reset').addEventListener('click', () => {
     eggs.forEach(removeEgg); eggs = []; count = 0;
     $('count').textContent = '000'; shell.classList.remove('playing');
