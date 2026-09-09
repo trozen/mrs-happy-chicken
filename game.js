@@ -8,6 +8,8 @@
   const hopRange = { min: 80, max: 160 };
   const hatchJumpStart = 2.8;
   const hatchJumpEnd = 3.4;
+  const shellFlightStart = 3.7;
+  const shellFlightDuration = .65;
   let eggs = [], count = 0, sound = true, audio;
   const henBounds = { left: 100, right: 900, top: 150, bottom: 500 };
   const chickBounds = { left: 65, right: 935, top: 120, bottom: 530 };
@@ -97,7 +99,6 @@
     if (activeTime - hen.laidAt < layDuration) return;
     hen.laidAt = activeTime;
     shell.classList.add('playing');
-    $('count').textContent = String(++count).padStart(3, '0');
     // All stages share the mother's ground line: hen + 56, egg + 30, chick + 27.
     const x = hen.x, y = hen.y + 26;
     const node = group('egg'), chickNode = group('chick'), capNode = group('shell-cap');
@@ -189,13 +190,41 @@
       // Follow an arc to a nearby landing spot, leaving the egg at takeoff.
       const lift = reducedMotion ? 0 : -42 * 4 * hopProgress * (1 - hopProgress);
       $('hen').setAttribute('transform', `translate(${hen.x} ${hen.y + lift}) scale(${hen.direction} 1)`);
+      // Convert the HTML counter position into SVG coordinates, including letterboxing.
+      let counterTarget;
+      if (eggs.some(egg => !egg.collected && activeTime - egg.born >= shellFlightStart)) {
+        const rect = document.querySelector('.score').getBoundingClientRect();
+        counterTarget = new DOMPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+          .matrixTransform($('scene').getScreenCTM().inverse());
+      }
       eggs.forEach(egg => {
         const age = activeTime - egg.born;
         const hatching = age >= 2;
         const opening = age >= 2.16;
         const emerging = age >= 2.4;
         const hatched = age >= 3.4;
-        const shellGone = age >= 3.7;
+        const flight = Math.max(0, Math.min(1, (age - shellFlightStart) / shellFlightDuration));
+        const shellGone = flight >= 1;
+        if (shellGone && !egg.collected) {
+          egg.collected = true;
+          $('count').textContent = String(++count).padStart(3, '0');
+        }
+        if (flight > 0 && !shellGone) {
+          // Fly above the flock; both pieces shrink into the counter together.
+          const progress = flight * flight * (3 - 2 * flight);
+          const x = egg.x + (counterTarget.x - egg.x) * progress;
+          const y = egg.y + (counterTarget.y - egg.y) * progress;
+          const scale = 1 - .5 * progress;
+          const transform = `translate(${x} ${y}) scale(${scale})`;
+          egg.node.setAttribute('transform', transform);
+          egg.capNode.setAttribute('transform', transform);
+          if (reducedMotion) {
+            // Keep the same arrival timing without a sweeping animation.
+            egg.node.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
+            egg.capNode.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
+            egg.node.style.opacity = egg.capNode.style.opacity = String(1 - flight);
+          }
+        }
         egg.node.style.display = shellGone ? 'none' : '';
         egg.whole.style.display = opening ? 'none' : '';
         egg.whole.setAttribute('href', hatching ? '#cracked-egg' : '#egg');
@@ -231,8 +260,8 @@
       const layers = [...eggs.flatMap(egg => [
         { node: egg.chickNode, depth: egg.walker.y + 27 },
         // At equal depth the shell lip sits in front of its emerging chick.
-        { node: egg.node, depth: egg.y + 30 },
-        { node: egg.capNode, depth: egg.y + (activeTime - egg.born >= 2.4 ? 40 : 30) }
+        { node: egg.node, depth: activeTime - egg.born >= shellFlightStart ? Infinity : egg.y + 30 },
+        { node: egg.capNode, depth: activeTime - egg.born >= shellFlightStart ? Infinity : egg.y + (activeTime - egg.born >= 2.4 ? 40 : 30) }
       ]), { node: $('hen'), depth: hen.y + 56 }].sort((a, b) => a.depth - b.depth);
       const flock = $('flock');
       layers.forEach(({ node }, index) => {
