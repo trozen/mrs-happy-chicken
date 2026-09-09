@@ -24,6 +24,7 @@
       for (let i = 0; i < birds.length; i++) {
         for (let j = i + 1; j < birds.length; j++) {
           const a = birds[i], b = birds[j];
+          if (a.fixed && b.fixed) continue;
           const dx = b.x - a.x, dy = b.y - a.y;
           const distance = Math.hypot(dx, dy);
           // Bodies can nestle together; only their smaller cores cannot cross.
@@ -35,10 +36,13 @@
           const nx = distance > .001 ? dx / distance : Math.cos(angle);
           const ny = distance > .001 ? dy / distance : Math.sin(angle);
           const push = minimum - distance + .01;
-          const share = b.mass / (a.mass + b.mass);
+          const inverseA = a.fixed ? 0 : 1 / a.mass;
+          const inverseB = b.fixed ? 0 : 1 / b.mass;
+          const share = inverseA / (inverseA + inverseB);
           a.x -= nx * push * share; a.y -= ny * push * share;
           b.x += nx * push * (1 - share); b.y += ny * push * (1 - share);
-          clamp(a); clamp(b);
+          if (!a.fixed) clamp(a);
+          if (!b.fixed) clamp(b);
         }
       }
       if (!overlap) break;
@@ -52,11 +56,22 @@
     const tick = dt / steps;
     for (let s = 0; s < steps; s++) {
       const velocities = birds.map((bird, index) => {
+        if (bird.fixed) return { x: 0, y: 0 };
         const dx = bird.target ? bird.target.x - bird.x : 0;
         const dy = bird.target ? bird.target.y - bird.y : 0;
         const distance = Math.hypot(dx, dy);
         let vx = distance > 2 ? dx / distance * bird.speed : 0;
         let vy = distance > 2 ? dy / distance * bird.speed : 0;
+        if (bird.follow) {
+          const fx = bird.follow.x - bird.x, fy = bird.follow.y - bird.y;
+          const away = Math.hypot(fx, fy);
+          // Leave room around the mother; gently bias distant chicks toward her.
+          const pull = Math.min(.5, Math.max(0, (away - 120) / 500));
+          if (pull > 0) {
+            vx += fx / away * bird.speed * pull;
+            vy += fy / away * bird.speed * pull;
+          }
+        }
         birds.forEach((other, otherIndex) => {
           if (index === otherIndex) return;
           const ox = bird.x - other.x, oy = bird.y - other.y;
@@ -66,7 +81,7 @@
           if (gap >= comfort || gap < .001) return;
           const nx = ox / gap, ny = oy / gap;
           // The mother holds her course; chicks yield and take most of a push.
-          const influence = 2 * other.mass / (bird.mass + other.mass);
+          const influence = other.fixed ? 2 : 2 * other.mass / (bird.mass + other.mass);
           const strength = Math.min(.8, (comfort - gap) / 20) * influence;
           vx += nx * strength * bird.speed;
           vy += ny * strength * bird.speed;
@@ -83,6 +98,7 @@
           y: (bird.vy || 0) + (vy - (bird.vy || 0)) * blend };
       });
       birds.forEach((bird, i) => {
+        if (bird.fixed) return;
         bird.vx = velocities[i].x; bird.vy = velocities[i].y;
         bird.x += bird.vx * tick; bird.y += bird.vy * tick;
         clamp(bird);

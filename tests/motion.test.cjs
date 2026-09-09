@@ -75,6 +75,47 @@ test('chicks can stand close and share a gentle nudge', () => {
   assert.ok(a.x < 400 && b.x > 432, 'Both chicks should share contact displacement');
 });
 
+test('distant chicks drift toward their mother while keeping their own heading', () => {
+  const chick = bird(150, 250, { x: 150, y: 500 });
+  chick.follow = { x: 750, y: 250 };
+  for (let i = 0; i < 60; i++) step([chick], 1 / 60);
+  assert.ok(chick.x > 170, 'Distant chick should drift toward mother');
+  assert.ok(chick.y > 290, 'Chick should still explore along its chosen heading');
+  assert.ok(Math.hypot(chick.vx, chick.vy) <= chick.speed + .001, 'Following must not increase chick speed');
+});
+
+test('chicks near their mother explore without being pulled into a pile', () => {
+  const chick = bird(400, 250, { x: 400, y: 400 });
+  chick.follow = { x: 460, y: 250 };
+  for (let i = 0; i < 30; i++) step([chick], 1 / 60);
+  assert.equal(chick.x, 400);
+  assert.ok(chick.y > 260);
+});
+
+test('adult and chick steer around a stationary egg without moving it', () => {
+  for (const adult of [false, true]) {
+    const walker = bird(250, 320, { x: 750, y: 320 }, adult);
+    const egg = { x: 460, y: 320, radius: 20, fixed: true };
+    for (let frame = 0; frame < 720; frame++) {
+      step([walker, egg], 1 / 60);
+      assert.equal(egg.x, 460);
+      assert.equal(egg.y, 320);
+      assert.ok(Math.hypot(walker.x - egg.x, walker.y - egg.y) >= (walker.radius + egg.radius) * .85 - .1);
+    }
+    assert.ok(walker.x > 700, 'Bird should get past the egg');
+  }
+});
+
+test('overlapping fixed eggs stay put and stop blocking once removed', () => {
+  const eggs = [{ x: 400, y: 320, radius: 20, fixed: true }, { x: 400, y: 320, radius: 20, fixed: true }];
+  step(eggs, .05);
+  assert.ok(eggs.every(egg => egg.x === 400 && egg.y === 320));
+  const chick = bird(350, 320, { x: 450, y: 320 });
+  // Once hatching finishes the fixed obstacle is no longer passed to physics.
+  for (let i = 0; i < 120; i++) step([chick], 1 / 60);
+  assert.ok(chick.x > 430);
+});
+
 test('coincident hatchlings separate and remain inside the boundary', () => {
   const birds = Array.from({ length: 8 }, (_, i) => bird(65, 120, { x: 300 + i * 70, y: 400 }));
   for (let frame = 0; frame < 300; frame++) step(birds, 1 / 60);
