@@ -19,7 +19,8 @@ main { width: 100%; max-width: 1080px; }
 .sound-muted { display: none; }
 #sound[aria-pressed="false"] .sound-waves { display: none; }
 #sound[aria-pressed="false"] .sound-muted { display: block; }
-button:focus-visible { outline: 2px solid white; outline-offset: -5px; }
+#playfield:focus { outline: none; }
+.game-controls button:focus-visible { outline: 2px solid white; outline-offset: -5px; }
 @media (max-width: 600px) {
   body { padding: 24px 5%; }
   .game-shell { aspect-ratio: 4 / 5; border-radius: 18px; }
