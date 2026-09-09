@@ -9,10 +9,6 @@
 </head>
 <body>
   <main>
-    <header class="page-heading">
-      <h1><span class="brand-egg" aria-hidden="true"></span>mrs happy chicken<span class="brand-dot">.</span></h1>
-      <span class="tagline">a little game of eggs & happiness</span>
-    </header>
     <section class="game-shell" aria-label="Mrs Happy Chicken game">
       <button id="playfield" aria-label="Lay an egg. You can also press the spacebar.">
         <svg id="scene" viewBox="0 0 1000 640" aria-hidden="true">
@@ -64,10 +60,52 @@
         </svg>
       </button>
       <div class="score" aria-label="Eggs laid"><span id="count">000</span></div>
-      <span class="inside-hint" id="inside-hint">Press space or tap to lay an egg</span>
-      <div class="game-controls"><button id="sound" aria-label="Turn sound off" aria-pressed="true">Sound on ♪</button><button id="reset" aria-label="Start again">↺ <span>Start again</span></button></div>
+      <div class="input-hint" aria-hidden="true">
+        <svg viewBox="0 0 300 150" fill="none" stroke="#005b83" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="91" cy="92" rx="90" ry="53" fill="#007fbe" stroke="none"/>
+          <ellipse cx="245" cy="81" rx="47" ry="67" fill="#007fbe" stroke="none"/>
+          <!-- Keyboard with its spacebar pressed. -->
+          <rect x="8" y="53" width="167" height="78" rx="12" fill="#bde7f1"/>
+          <rect x="19" y="63" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="49" y="63" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="79" y="63" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="109" y="63" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="139" y="63" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="19" y="82" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="49" y="82" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="79" y="82" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="109" y="82" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="139" y="82" width="23" height="13" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="19" y="103" width="23" height="17" rx="3" fill="#fffbed" stroke-width="2"/>
+          <rect x="49" y="106" width="83" height="14" rx="3" fill="#ffdf57" stroke-width="2"/>
+          <rect x="139" y="103" width="23" height="17" rx="3" fill="#fffbed" stroke-width="2"/>
+          <!-- The left button follows the same outer contour as the mouse. -->
+          <g transform="translate(213 29)">
+            <path d="M32 0C12 0 0 14 0 34v34c0 24 14 36 32 36s32-12 32-36V34C64 14 52 0 32 0Z" fill="#fffbed" stroke="none"/>
+            <path d="M32 0C12 0 0 14 0 34v10h32Z" fill="#ffdf57" stroke="none"/>
+            <path d="M32 0C12 0 0 14 0 34v34c0 24 14 36 32 36s32-12 32-36V34C64 14 52 0 32 0Z"/>
+            <path d="M32 0v44M0 44h64"/>
+            <rect x="28" y="18" width="8" height="15" rx="4" fill="#005b83" stroke="none"/>
+          </g>
+          <path d="M81 102l-6-7m16 5V90m10 12 6-7M81 125l-6 7m16-5v10m10-12 6 7M221 41l-5-7m13 4V28m8 13 5-7M221 63l-5 7m13-4v10m8-13 5 7" stroke="#222" stroke-width="4"/>
+        </svg>
+      </div>
+      <div class="game-controls">
+        <button id="sound" aria-label="Turn sound off" aria-pressed="true">
+          <svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 16h6l8-7v22l-8-7H7Z" fill="currentColor" stroke="none"/>
+            <g class="sound-waves"><path d="M26 14q6 6 0 12m5-17q11 11 0 22"/></g>
+            <path class="sound-muted" d="m27 16 8 8m0-8-8 8"/>
+          </svg>
+        </button>
+        <button id="reset" aria-label="Start again">
+          <svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 12a13 13 0 1 1-3 14"/>
+            <path d="M10 5v9h9"/>
+          </svg>
+        </button>
+      </div>
     </section>
-    <p class="play-hint">Press <kbd>space</kbd> or tap the blue screen to lay an egg.</p>
   </main>
   <script src="motion.js"></script>
   <script src="game.js"></script>

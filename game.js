@@ -121,13 +121,14 @@
   $('playfield').addEventListener('click', lay);
   document.addEventListener('keydown', event => {
     if (event.code !== 'Space' || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.target.closest('button, a, input, textarea, select') && event.target !== $('playfield')) return;
+    if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    // Space belongs to the game, including when a control retains focus.
+    // Cancelling its default action prevents a second mute/restart click.
     event.preventDefault();
     if (!event.repeat) lay();
   });
   $('sound').addEventListener('click', () => {
     sound = !sound;
-    $('sound').textContent = sound ? 'Sound on ♪' : 'Sound off ♪';
     $('sound').setAttribute('aria-label', sound ? 'Turn sound off' : 'Turn sound on');
     $('sound').setAttribute('aria-pressed', String(sound));
   });
