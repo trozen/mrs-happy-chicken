@@ -37,3 +37,11 @@ Inspected the actual frames of [this official compilation at 00:49–00:52](http
 At the user's request, the implementation uses continuous wandering and two alternating leg poses instead of the clip's jumps between locations. Each 320 ms laying hop travels 80–160 game units (8–16% of the playfield width) to a random in-bounds destination, leaving the egg at takeoff. Walking pauses during the hop; the chicken then resumes her route. Reduced-motion mode omits the leg cycling, bob, and lift while retaining movement. Incubation lasts two seconds, with a shake during its final 0.7 seconds, followed by crack, cap, emergence, and independent chick walking stages. Reduced-motion mode also omits egg shaking and chick leg cycling. Exact incubation/emergence durations and spacing are approximations across edited shots. The synthesized sound is still a placeholder; audio has not been matched. Unlike the later episode's end sequence, this prototype continues playing rather than switching to a high-score screen.
 
 Both adult and chick walk poses lift the feet vertically while keeping their bodies level. The adult uses a modest six-unit lift so both feet remain visible.
+
+## Spacing and depth
+
+Birds can bunch up, overlap slightly, and nudge each other. A narrow soft avoidance zone surrounds smaller circular cores that cannot pass through each other. The mother has 24 times a chick’s weight and yields much less, so she pushes chicks forward and aside while mostly holding her course. Chicks share contact displacement evenly. Birds stay within the play area. Airborne hops can pass over birds, prefer an open landing spot, and rejoin collision handling on landing. Eggs and shells remain decorative rather than blocking movement.
+
+Drawing order follows ground-level foot positions: birds lower on the screen appear in front. Hop height does not change depth, and hatched chicks sort by their current location rather than their original egg location.
+
+Run the movement checks with `node --test tests/motion.test.cjs`. They cover head-on passing, overlapping hatchlings at an edge, collision checks across longer frames, and frame-rate consistency.

@@ -7,7 +7,9 @@
   const layDuration = .32;
   const hopRange = { min: 80, max: 160 };
   let eggs = [], count = 0, sound = true, audio;
-  const newHen = () => ({ x: 500, y: 365, laidAt: -Infinity, hop: null, target: null, direction: -1, walkTime: 0 });
+  const henBounds = { left: 100, right: 900, top: 150, bottom: 500 };
+  const chickBounds = { left: 65, right: 935, top: 120, bottom: 530 };
+  const newHen = () => ({ radius: 40, mass: 24, speed: 145, bounds: henBounds, x: 500, y: 365, laidAt: -Infinity, hop: null, target: null, direction: -1, walkTime: 0 });
   let hen = newHen();
   let lastFrame = 0, activeTime = 0;
 
@@ -48,20 +50,6 @@
     node.setAttribute('href', href); parent.append(node); return node;
   }
 
-  function wander(bird, target, speed, dt) {
-    bird.target ||= target();
-    const dx = bird.target.x - bird.x, dy = bird.target.y - bird.y;
-    const distance = Math.hypot(dx, dy);
-    const step = Math.min(distance, dt * speed);
-    if (distance > 0) {
-      bird.x += dx / distance * step;
-      bird.y += dy / distance * step;
-      if (Math.abs(dx) > 1) bird.direction = dx > 0 ? 1 : -1;
-      bird.walkTime += dt;
-    }
-    if (distance <= step) bird.target = null;
-  }
-
   const chickSpot = () => ({ x: 65 + Math.random() * 870, y: 120 + Math.random() * 410 });
 
   function hopDestination() {
@@ -70,7 +58,8 @@
       const distance = hopRange.min + Math.random() * (hopRange.max - hopRange.min);
       const x = hen.x + Math.cos(angle) * distance;
       const y = hen.y + Math.sin(angle) * distance;
-      if (x >= 100 && x <= 900 && y >= 150 && y <= 500) return { x, y };
+      if (x >= 100 && x <= 900 && y >= 150 && y <= 500 &&
+          eggs.every(egg => activeTime - egg.born < 3.4 || Math.hypot(x - egg.walker.x, y - egg.walker.y) >= hen.radius + egg.walker.radius)) return { x, y };
     }
     // An inward hop is always safe if random attempts all point out of bounds.
     const angle = Math.atan2(325 - hen.y, 500 - hen.x);
@@ -94,7 +83,7 @@
     node.setAttribute('transform', `translate(${hen.x} ${hen.y + 32})`);
     $('flock').append(node);
     const egg = { node, x: hen.x, y: hen.y + 32, born: activeTime,
-      walker: { x: hen.x, y: hen.y + 14, target: null, direction: -1, walkTime: Math.random() },
+      walker: { radius: 19, mass: 1, speed: 65, bounds: chickBounds, x: hen.x, y: hen.y + 14, target: null, direction: -1, walkTime: Math.random() },
       whole: use('#egg', node), chick: use('#chick', node),
       bottom: use('#shell-bottom', node), top: use('#shell-top', node) };
     egg.chick.style.display = egg.bottom.style.display = egg.top.style.display = 'none';
@@ -103,6 +92,7 @@
     hen.hop = { from: { x: hen.x, y: hen.y }, to: hopDestination() };
     hen.direction = hen.hop.to.x >= hen.x ? 1 : -1;
     hen.target = onwardTarget(hen.hop.from, hen.hop.to);
+    hen.vx = hen.vy = 0;
     cluck();
   }
 
@@ -137,10 +127,21 @@
         const { from, to } = hen.hop;
         hen.x = from.x + (to.x - from.x) * hopProgress;
         hen.y = from.y + (to.y - from.y) * hopProgress;
-        if (hopProgress === 1) hen.hop = null;
+        if (hopProgress === 1) {
+          hen.hop = null;
+          const distance = Math.hypot(to.x - from.x, to.y - from.y);
+          hen.vx = (to.x - from.x) / distance * hen.speed;
+          hen.vy = (to.y - from.y) / distance * hen.speed;
+        }
       }
       const walking = !wasHopping && layAge >= layDuration;
-      if (walking) wander(hen, nextSpot, 145, dt);
+      const birds = eggs.filter(egg => activeTime - egg.born >= 3.4).map(egg => egg.walker);
+      birds.forEach(bird => { bird.target ||= chickSpot(); });
+      if (!hen.hop) {
+        hen.target ||= nextSpot();
+        birds.unshift(hen);
+      }
+      ChickenMotion.step(birds, dt);
       const alternateStep = walking && !reducedMotion && Math.floor(hen.walkTime / .14) % 2 === 1;
       $('hen-sprite').setAttribute('href', alternateStep ? '#bird-step' : '#bird');
       // Follow an arc to a nearby landing spot, leaving the egg at takeoff.
@@ -166,7 +167,6 @@
             tossed ? 'translate(43 15) rotate(110)' : 'translate(12 -35) rotate(25)');
         }
         if (emerging) {
-          if (hatched) wander(egg.walker, chickSpot, 65, dt);
           const stepping = hatched && !reducedMotion && Math.floor(egg.walker.walkTime / .16) % 2 === 1;
           egg.chick.setAttribute('href', stepping ? '#chick-step' : '#chick');
           const size = .85;
@@ -174,6 +174,15 @@
           const y = hatched ? egg.walker.y - egg.y : -8;
           egg.chick.setAttribute('transform', `translate(${x} ${y}) scale(${egg.walker.direction * size} ${size})`);
         }
+      });
+      // SVG paints in document order. Sort by feet on the ground, not hop height.
+      const layers = [{ node: $('hen'), depth: hen.y + 56 }, ...eggs.map(egg => ({
+        node: egg.node,
+        depth: activeTime - egg.born >= 3.4 ? egg.walker.y + 27 : egg.y + 30
+      }))].sort((a, b) => a.depth - b.depth);
+      const flock = $('flock');
+      layers.forEach(({ node }, index) => {
+        if (flock.children[index] !== node) flock.insertBefore(node, flock.children[index] || null);
       });
     }
     requestAnimationFrame(frame);

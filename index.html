@@ -57,8 +57,7 @@
             <path id="shell-bottom" d="m-24-2 9 8 7-11 9 11 8-10 8 9 6-8c8 43-55 43-47 1Z" fill="#fffbb0" stroke="#24251b" stroke-width="4" stroke-linejoin="round"/>
             <path id="shell-top" d="M-24-2C-18-38 17-38 24-3l-7 8-8-9-8 10-9-11-7 11Z" fill="#fffbb0" stroke="#24251b" stroke-width="4" stroke-linejoin="round"/>
           </defs>
-          <g id="flock"></g>
-          <g id="hen"><use id="hen-sprite" href="#bird"/></g>
+          <g id="flock"><g id="hen"><use id="hen-sprite" href="#bird"/></g></g>
         </svg>
       </button>
       <div class="score" aria-label="Eggs laid"><span id="count">000</span></div>
@@ -67,6 +66,7 @@
     </section>
     <p class="play-hint">Press <kbd>space</kbd> or tap the blue screen to lay an egg.</p>
   </main>
+  <script src="motion.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
