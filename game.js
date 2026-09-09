@@ -13,9 +13,45 @@
   let eggs = [], count = 0, sound = true, audio;
   const henBounds = { left: 100, right: 900, top: 150, bottom: 500 };
   const chickBounds = { left: 65, right: 935, top: 120, bottom: 530 };
-  const newHen = () => ({ radius: 40, mass: 24, speed: 145, bounds: henBounds, x: 500, y: 365, laidAt: -Infinity, hop: null, target: null, direction: -1, walkTime: 0 });
+  const newHen = () => ({ radius: 40, mass: 24, speed: 145, bounds: henBounds, x: (henBounds.left + henBounds.right) / 2, y: henBounds.top + (henBounds.bottom - henBounds.top) * .6, laidAt: -Infinity, hop: null, target: null, direction: -1, walkTime: 0 });
   let hen = newHen();
   let lastFrame = 0, activeTime = 0;
+
+  let world = { left: 0, width: 1000, height: 640 };
+  function resizeWorld() {
+    const rect = shell.getBoundingClientRect();
+    const mobile = matchMedia('(max-width: 600px)').matches;
+    const width = mobile ? 400 : 1000;
+    const next = { left: (1000 - width) / 2, width, height: mobile ? width * rect.height / rect.width : 640 };
+    if (next.width === world.width && next.height === world.height) return;
+    const previous = world;
+    world = next;
+    $('scene').setAttribute('viewBox', `${world.left} 0 ${world.width} ${world.height}`);
+    Object.assign(henBounds, { left: world.left + 100, right: world.left + world.width - 100, bottom: world.height - 140 });
+    Object.assign(chickBounds, { left: world.left + 65, right: world.left + world.width - 65, bottom: world.height - 110 });
+    // Keep the flock and any active hops in the same relative area on resize.
+    const mapped = new Set();
+    const move = point => {
+      if (!point || mapped.has(point)) return;
+      mapped.add(point);
+      point.x = world.left + (point.x - previous.left) * world.width / previous.width;
+      point.y *= world.height / previous.height;
+    };
+    const moveBird = bird => {
+      move(bird); move(bird.target);
+      bird.x = Math.max(bird.bounds.left, Math.min(bird.bounds.right, bird.x));
+      bird.y = Math.max(bird.bounds.top, Math.min(bird.bounds.bottom, bird.y));
+    };
+    moveBird(hen);
+    if (hen.hop) { move(hen.hop.from); move(hen.hop.to); }
+    eggs.forEach(egg => {
+      move(egg); move(egg.collider); moveBird(egg.walker);
+      if (egg.exitHop) { move(egg.exitHop.from); move(egg.exitHop.to); }
+    });
+  }
+  resizeWorld();
+  new ResizeObserver(resizeWorld).observe(shell);
+
 
   function cluck() {
     if (!sound) return;
@@ -76,21 +112,21 @@
       const distance = hopRange.min + Math.random() * (hopRange.max - hopRange.min);
       const x = hen.x + Math.cos(angle) * distance;
       const y = hen.y + Math.sin(angle) * distance;
-      if (x >= 100 && x <= 900 && y >= 150 && y <= 500 &&
+      if (x >= henBounds.left && x <= henBounds.right && y >= henBounds.top && y <= henBounds.bottom &&
           eggs.every(egg => {
             const body = activeTime - egg.born >= 3.4 ? egg.walker : egg.collider;
             return Math.hypot(x - body.x, y - body.y) >= hen.radius + body.radius;
           })) return { x, y };
     }
     // An inward hop is always safe if random attempts all point out of bounds.
-    const angle = Math.atan2(325 - hen.y, 500 - hen.x);
+    const angle = Math.atan2((henBounds.top + henBounds.bottom) / 2 - hen.y, 500 - hen.x);
     return { x: hen.x + Math.cos(angle) * hopRange.min, y: hen.y + Math.sin(angle) * hopRange.min };
   }
 
   function onwardTarget(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
-    const toXEdge = dx > 0 ? (900 - to.x) / dx : dx < 0 ? (100 - to.x) / dx : Infinity;
-    const toYEdge = dy > 0 ? (500 - to.y) / dy : dy < 0 ? (150 - to.y) / dy : Infinity;
+    const toXEdge = dx > 0 ? (henBounds.right - to.x) / dx : dx < 0 ? (henBounds.left - to.x) / dx : Infinity;
+    const toYEdge = dy > 0 ? (henBounds.bottom - to.y) / dy : dy < 0 ? (henBounds.top - to.y) / dy : Infinity;
     const distance = Math.max(0, Math.min(toXEdge, toYEdge));
     return { x: to.x + dx * distance, y: to.y + dy * distance };
   }
@@ -216,6 +252,10 @@
         if (shellGone && !egg.collected) {
           egg.collected = true;
           $('count').textContent = String(++count).padStart(3, '0');
+        }
+        if (flight === 0) {
+          egg.node.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
+          egg.capNode.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
         }
         if (flight > 0 && !shellGone) {
           // Fly above the flock; both pieces shrink into the counter together.
