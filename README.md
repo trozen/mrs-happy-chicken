@@ -1,5 +1,7 @@
 # Mrs Happy Chicken
 
+**[Play in your browser — desktop or mobile](https://trozen.github.io/mrs-happy-chicken/)**
+
 A small playable browser mockup inspired by the computer game pictured in Peppa Pig.
 
 Open `index.html` directly in a browser, or run:
