@@ -10,10 +10,14 @@
   const hatchJumpEnd = 3.4;
   const shellFlightStart = 3.7;
   const shellFlightDuration = .65;
+  const flockLimit = 999;
+  const requestedEggs = new URLSearchParams(location.search).get('eggs');
+  const debugEggCount = requestedEggs && /^\d+$/.test(requestedEggs)
+    ? Math.min(Number(requestedEggs), flockLimit) : 0;
   let eggs = [], count = 0, sound = true, audio;
-  const henBounds = { left: 100, right: 900, top: 150, bottom: 500 };
-  const chickBounds = { left: 65, right: 935, top: 120, bottom: 530 };
-  const newHen = () => ({ radius: 40, mass: 24, speed: 145, bounds: henBounds, x: (henBounds.left + henBounds.right) / 2, y: henBounds.top + (henBounds.bottom - henBounds.top) * .6, laidAt: -Infinity, hop: null, target: null, direction: -1, walkTime: 0 });
+  const henBounds = { left: 74, right: 926, top: 80, bottom: 570 };
+  const chickBounds = { left: 37, right: 963, top: 33, bottom: 601 };
+  const newHen = () => ({ radius: 40, mass: 24, speed: 145, bounds: henBounds, x: (henBounds.left + henBounds.right) / 2, y: henBounds.top + (henBounds.bottom - henBounds.top) * .6, laidAt: -Infinity, crowdCheckAt: 0, hop: null, target: null, direction: -1, walkTime: 0 });
   let hen = newHen();
   let lastFrame = 0, activeTime = 0;
 
@@ -22,13 +26,14 @@
     const rect = shell.getBoundingClientRect();
     const mobile = matchMedia('(max-width: 600px)').matches;
     const width = mobile ? 400 : 1000;
-    const next = { left: (1000 - width) / 2, width, height: mobile ? width * rect.height / rect.width : 640 };
+    const next = { left: (1000 - width) / 2, width, height: width * rect.height / rect.width };
     if (next.width === world.width && next.height === world.height) return;
     const previous = world;
     world = next;
     $('scene').setAttribute('viewBox', `${world.left} 0 ${world.width} ${world.height}`);
-    Object.assign(henBounds, { left: world.left + 100, right: world.left + world.width - 100, bottom: world.height - 140 });
-    Object.assign(chickBounds, { left: world.left + 65, right: world.left + world.width - 65, bottom: world.height - 110 });
+    // Sprite extents plus a small border, rather than a large reserved play zone.
+    Object.assign(henBounds, { left: world.left + 74, right: world.left + world.width - 74, top: 80, bottom: world.height - 70 });
+    Object.assign(chickBounds, { left: world.left + 37, right: world.left + world.width - 37, top: 33, bottom: world.height - 39 });
     // Keep the flock and any active hops in the same relative area on resize.
     const mapped = new Set();
     const move = point => {
@@ -93,7 +98,6 @@
     egg.node.remove(); egg.chickNode.remove(); egg.capNode.remove();
   }
 
-  const chickSpot = bird => ChickenMotion.wanderTarget(bird, 55, 110);
 
   function chickLanding(egg) {
     for (let attempt = 0; attempt < 24; attempt++) {
@@ -131,12 +135,10 @@
     return { x: to.x + dx * distance, y: to.y + dy * distance };
   }
 
-  function lay() {
-    if (activeTime - hen.laidAt < layDuration) return;
-    hen.laidAt = activeTime;
+  function spawnEgg(x, y) {
+    // Each egg reserves one chick, including incubation and shell-flight time.
+    if (eggs.length >= flockLimit) return false;
     shell.classList.add('playing');
-    // All stages share the mother's ground line: hen + 56, egg + 30, chick + 27.
-    const x = hen.x, y = hen.y + 26;
     const node = group('egg'), chickNode = group('chick'), capNode = group('shell-cap');
     node.setAttribute('transform', `translate(${x} ${y})`);
     capNode.setAttribute('transform', `translate(${x} ${y})`);
@@ -147,13 +149,31 @@
       bottom: use('#shell-bottom', node), top: use('#shell-top', capNode) };
     chickNode.style.display = capNode.style.display = egg.bottom.style.display = 'none';
     eggs.push(egg);
-    if (eggs.length > 100) removeEgg(eggs.shift());
+    return true;
+  }
+
+  function lay() {
+    if (activeTime - hen.laidAt < layDuration) return;
+    // All stages share the mother's ground line: hen + 56, egg + 30, chick + 27.
+    if (!spawnEgg(hen.x, hen.y + 26)) return;
+    hen.laidAt = activeTime;
     hen.hop = { from: { x: hen.x, y: hen.y }, to: hopDestination() };
     hen.direction = hen.hop.to.x >= hen.x ? 1 : -1;
     hen.target = onwardTarget(hen.hop.from, hen.hop.to);
     hen.vx = hen.vy = 0;
     cluck();
   }
+
+  function spawnDebugFlock(amount) {
+    for (let i = 0; i < amount; i++) {
+      const x = chickBounds.left + Math.random() * (chickBounds.right - chickBounds.left);
+      const y = chickBounds.top + Math.random() * (chickBounds.bottom - chickBounds.top - 3);
+      spawnEgg(x, y);
+    }
+  }
+
+  // Optional crowd test, available on desktop and phones without extra controls.
+  spawnDebugFlock(debugEggCount);
 
   $('playfield').addEventListener('click', lay);
   document.addEventListener('keydown', event => {
@@ -231,11 +251,24 @@
         if (progress === 1) egg.exitLanded = true;
       });
       const birds = eggs.filter(egg => activeTime - egg.born >= 3.4).map(egg => egg.walker);
+      const familyRadius = Math.max(120, Math.sqrt(birds.length) * 22);
       birds.forEach(bird => {
-        bird.target ||= chickSpot(bird);
+        if (!bird.target) {
+          bird.restUntil ??= activeTime + .2 + Math.random() * .7;
+          if (activeTime >= bird.restUntil) {
+            bird.target = ChickenMotion.chickWanderTarget(bird, birds);
+            bird.restUntil = undefined;
+          }
+        }
         bird.follow = hen;
+        bird.followRadius = familyRadius;
       });
       if (!hen.hop) {
+        if (activeTime >= hen.crowdCheckAt && layAge >= 1) {
+          const escape = ChickenMotion.crowdEscapeTarget(hen, birds);
+          if (escape) hen.target = escape;
+          hen.crowdCheckAt = activeTime + .9;
+        }
         hen.target ||= nextSpot();
         birds.unshift(hen);
       }
@@ -252,7 +285,7 @@
       $('beak-upper').setAttribute('transform', `rotate(${-beakAngle} 30 -8)`);
       $('beak-lower').setAttribute('transform', `rotate(${beakAngle} 30 -8)`);
       // Follow an arc to a nearby landing spot, leaving the egg at takeoff.
-      const lift = reducedMotion ? 0 : -42 * 4 * hopProgress * (1 - hopProgress);
+      const lift = reducedMotion ? 0 : Math.max(henBounds.top - hen.y, -42 * 4 * hopProgress * (1 - hopProgress));
       $('hen').setAttribute('transform', `translate(${hen.x} ${hen.y + lift}) scale(${hen.direction} 1)`);
       // Convert the HTML counter position into SVG coordinates, including letterboxing.
       let counterTarget;
@@ -319,7 +352,7 @@
           else egg.chick.setAttribute('clip-path', 'url(#chick-in-shell)');
           const size = .85;
           const peek = age < hatchJumpStart ? -8 * Math.sin(Math.PI * (age - 2.4) / .4) : 0;
-          const lift = reducedMotion ? 0 : peek - 70 * Math.sin(Math.PI * jump);
+          const lift = reducedMotion ? 0 : Math.max(chickBounds.top - egg.walker.y, peek - 70 * Math.sin(Math.PI * jump));
           egg.chickNode.setAttribute('transform', `translate(${egg.walker.x} ${egg.walker.y + lift})`);
           egg.chick.setAttribute('transform', `scale(${egg.walker.direction * size} ${size})`);
         }

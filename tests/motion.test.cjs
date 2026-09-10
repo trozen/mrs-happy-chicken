@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { step, wanderTarget } = require('../motion.js');
+const { step, separate, wanderTarget, chickWanderTarget, crowdEscapeTarget } = require('../motion.js');
 
 function bird(x, y, target, adult = false) {
   return { x, y, target, radius: adult ? 40 : 19, mass: adult ? 24 : 1,
@@ -136,4 +136,71 @@ test('separation produces similar results at 30 and 120 frames per second', () =
   }
   const slow = simulate(30), fast = simulate(120);
   slow.forEach((b, i) => assert.ok(Math.hypot(b.x - fast[i].x, b.y - fast[i].y) < 1));
+});
+
+
+test('a bump passes momentum through a line of touching chicks without adding energy', () => {
+  const chicks = [bird(400, 320, null), bird(432, 320, null), bird(464, 320, null)];
+  chicks[0].vx = 90;
+  separate(chicks);
+  assert.ok(chicks[2].vx > 10, 'The third chick should receive the push');
+  assert.ok(chicks[0].vx < 90, 'The first chick should lose momentum');
+  assert.ok(Math.abs(chicks.reduce((sum, b) => sum + b.vx, 0) - 90) < .001);
+  assert.ok(chicks.reduce((sum, b) => sum + b.vx ** 2 + (b.vy || 0) ** 2, 0) <= 90 ** 2);
+  checkSpace(chicks);
+});
+
+test('resting chicks do not gain bouncing velocity from overlap alone', () => {
+  const chicks = [bird(400, 320, null), bird(432, 320, null)];
+  separate(chicks);
+  assert.ok(chicks.every(b => !b.vx && !b.vy));
+  checkSpace(chicks);
+});
+
+test('a crowded mother chooses space away from a nearby cluster', () => {
+  const mother = bird(500, 320, null, true);
+  const neighbors = [bird(545, 290, null), bird(545, 350, null), bird(575, 320, null)];
+  for (let i = 0; i < 24; i++) {
+    const target = crowdEscapeTarget(mother, neighbors, () => i / 24);
+    assert.ok(target && target.x < 430, 'Mother should move into the empty left side');
+  }
+  assert.equal(crowdEscapeTarget(mother, neighbors.slice(0, 2)), null, 'A couple of chicks should not interrupt wandering');
+});
+
+test('crowd escape stays inside the board when the mother is near an edge', () => {
+  const mother = bird(70, 320, null, true);
+  const neighbors = [bird(100, 290, null), bird(100, 350, null), bird(120, 320, null)];
+  for (let i = 0; i < 24; i++) {
+    const target = crowdEscapeTarget(mother, neighbors, () => i / 24);
+    assert.ok(target);
+    assert.ok(target.x >= 65 && target.x <= 935 && target.y >= 120 && target.y <= 530);
+  }
+});
+
+
+test('a chick chooses a clear walking route instead of entering a nearby cluster', () => {
+  const chick = bird(400, 320, null);
+  const neighbors = [bird(450, 290, null), bird(450, 320, null), bird(450, 350, null)];
+  let call = 0;
+  const random = () => call++ % 2 ? .5 : Math.floor((call - 1) / 2) / 8;
+  const target = chickWanderTarget(chick, neighbors, random);
+  assert.ok(target.x < chick.x, 'Choose open space away from the cluster');
+});
+
+test('a crowded chick stops pulling inward toward the mother', () => {
+  function velocity(follow) {
+    const chick = bird(400, 320, { x: 400, y: 450 });
+    if (follow) chick.follow = { x: 850, y: 320 };
+    const neighbors = Array.from({ length: 5 }, (_, i) => {
+      const angle = i * Math.PI * 2 / 5;
+      const other = bird(400 + 65 * Math.cos(angle), 320 + 65 * Math.sin(angle), null);
+      other.speed = 0;
+      return other;
+    });
+    step([chick, ...neighbors], 1 / 120);
+    return chick;
+  }
+  const withMother = velocity(true), withoutMother = velocity(false);
+  assert.ok(Math.abs(withMother.vx - withoutMother.vx) < .001);
+  assert.ok(Math.abs(withMother.vy - withoutMother.vy) < .001);
 });
