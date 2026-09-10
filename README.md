@@ -59,3 +59,5 @@ Run the movement checks with `node --test tests/motion.test.cjs`. They cover hea
 Append **`?eggs=50`** to the game URL to start with 50 randomly placed eggs (for example, `http://localhost:8000/?eggs=50`). Choose a nonnegative whole number up to 999. For example, `?eggs=200` spawns 200 eggs, leaving room for 799 more. Larger values are capped at 999. Missing or invalid values start an empty game.
 
 The eggs shake, hatch, and send their shells to the counter normally. Restart clears the flock; refreshing spawns the requested batch again. This works on desktop and mobile, with no extra controls or changes to flock movement.
+
+Nearby movement interactions use a spatial grid: steering, contact resolution, and crowd-aware destinations only inspect relevant neighboring cells. Collision pushes update the grid immediately, including pushes across cell boundaries. Candidate indices are emitted in stable order using a bitset, avoiding repeated sorts in dense crowds. Dense crowds still take more work because more birds genuinely interact. Collected shells are removed from the SVG, and chick poses are updated only when they change.

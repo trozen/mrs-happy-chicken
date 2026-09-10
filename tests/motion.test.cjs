@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { step, separate, wanderTarget, chickWanderTarget, crowdEscapeTarget } = require('../motion.js');
+const { SpatialGrid, step, separate, wanderTarget, chickWanderTarget, crowdEscapeTarget } = require('../motion.js');
 
 function bird(x, y, target, adult = false) {
   return { x, y, target, radius: adult ? 40 : 19, mass: adult ? 24 : 1,
@@ -203,4 +203,55 @@ test('a crowded chick stops pulling inward toward the mother', () => {
   const withMother = velocity(true), withoutMother = velocity(false);
   assert.ok(Math.abs(withMother.vx - withoutMother.vx) < .001);
   assert.ok(Math.abs(withMother.vy - withoutMother.vy) < .001);
+});
+
+
+test('spatial queries match a full scan across cell boundaries and negative coordinates', () => {
+  let seed = 19;
+  const random = () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
+  const birds = Array.from({ length: 500 }, () => bird(random() * 1600 - 800, random() * 1200 - 600, null));
+  birds.push(bird(64, -64, null));
+  const grid = new SpatialGrid(birds);
+  const verify = () => {
+    for (const radius of [0, 40, 80, 195, 300]) {
+      for (const [x, y] of [[64, -64], [0, 0], [-65, 63], [799, 599]]) {
+        assert.deepEqual(grid.query(x, y, radius), birds.filter(b => Math.abs(b.x - x) <= radius && Math.abs(b.y - y) <= radius));
+      }
+    }
+  };
+  verify();
+  birds[0].x = 64; birds[0].y = -64; grid.update(0);
+  birds[500].x = -700; birds[500].y = 500; grid.update(500);
+  verify();
+});
+
+test('crowd routing using a spatial grid chooses the same targets as scanning the flock', () => {
+  const chick = bird(400, 320, null);
+  const neighbors = Array.from({ length: 100 }, (_, i) => bird(80 + i % 10 * 90, 120 + Math.floor(i / 10) * 50, null));
+  const grid = new SpatialGrid(neighbors);
+  const random = () => {
+    let seed = 42;
+    return () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
+  };
+  assert.deepEqual(chickWanderTarget(chick, grid, random()), chickWanderTarget(chick, neighbors, random()));
+  assert.deepEqual(crowdEscapeTarget(chick, grid, random()), crowdEscapeTarget(chick, neighbors, random()));
+});
+
+test('contact pushes cross spatial cell boundaries without losing the next neighbor', () => {
+  const chicks = [bird(63, 320, null), bird(95, 320, null), bird(127, 320, null)];
+  chicks.forEach(chick => { chick.bounds.left = 0; });
+  chicks[0].vx = 90;
+  separate(chicks);
+  assert.ok(chicks[2].vx > 10);
+  checkSpace(chicks);
+});
+
+
+test('dense candidate queries preserve pair order across 32-bit boundaries', () => {
+  const birds = Array.from({ length: 999 }, (_, i) => bird(63 + i % 3, 63 + i % 5, null));
+  const grid = new SpatialGrid(birds);
+  for (const after of [-1, 0, 30, 31, 32, 63, 990, 998]) {
+    assert.deepEqual(grid.indices(64, 64, 40, false, after),
+      birds.map((_, i) => i).filter(i => i > after));
+  }
 });

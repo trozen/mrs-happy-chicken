@@ -252,11 +252,12 @@
       });
       const birds = eggs.filter(egg => activeTime - egg.born >= 3.4).map(egg => egg.walker);
       const familyRadius = Math.max(120, Math.sqrt(birds.length) * 22);
+      const flockGrid = new ChickenMotion.SpatialGrid(birds);
       birds.forEach(bird => {
         if (!bird.target) {
           bird.restUntil ??= activeTime + .2 + Math.random() * .7;
           if (activeTime >= bird.restUntil) {
-            bird.target = ChickenMotion.chickWanderTarget(bird, birds);
+            bird.target = ChickenMotion.chickWanderTarget(bird, flockGrid);
             bird.restUntil = undefined;
           }
         }
@@ -265,7 +266,7 @@
       });
       if (!hen.hop) {
         if (activeTime >= hen.crowdCheckAt && layAge >= 1) {
-          const escape = ChickenMotion.crowdEscapeTarget(hen, birds);
+          const escape = ChickenMotion.crowdEscapeTarget(hen, flockGrid);
           if (escape) hen.target = escape;
           hen.crowdCheckAt = activeTime + .9;
         }
@@ -304,61 +305,74 @@
         const shellGone = flight >= 1;
         if (shellGone && !egg.collected) {
           egg.collected = true;
+          egg.node.remove();
+          egg.capNode.remove();
           $('count').textContent = String(++count).padStart(3, '0');
         }
-        if (flight === 0) {
-          egg.node.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
-          egg.capNode.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
-        }
-        if (flight > 0 && !shellGone) {
-          // Fly above the flock; both pieces shrink into the counter together.
-          const progress = flight * flight * (3 - 2 * flight);
-          const x = egg.x + (counterTarget.x - egg.x) * progress;
-          const y = egg.y + (counterTarget.y - egg.y) * progress;
-          const scale = 1 - .5 * progress;
-          const transform = `translate(${x} ${y}) scale(${scale})`;
-          egg.node.setAttribute('transform', transform);
-          egg.capNode.setAttribute('transform', transform);
-          if (reducedMotion) {
-            // Keep the same arrival timing without a sweeping animation.
+        if (!egg.collected) {
+          if (flight === 0) {
             egg.node.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
             egg.capNode.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
-            egg.node.style.opacity = egg.capNode.style.opacity = String(1 - flight);
           }
-        }
-        egg.node.style.display = shellGone ? 'none' : '';
-        egg.whole.style.display = opening ? 'none' : '';
-        egg.whole.setAttribute('href', hatching ? '#cracked-egg' : '#egg');
-        // The egg first appears under the hen, then stays fixed in place.
-        const shake = !reducedMotion && age >= 1.3 && !opening ? Math.sin((age - 1.3) * 36) * 11 : 0;
-        const eggScale = age < .04 && !reducedMotion ? .4 : 1;
-        egg.whole.setAttribute('transform', `rotate(${shake} 0 30) translate(0 30) scale(${eggScale}) translate(0 -30)`);
-        egg.capNode.style.display = opening && !shellGone ? '' : 'none';
-        egg.bottom.style.display = opening && !shellGone ? '' : 'none';
-        egg.chickNode.style.display = emerging ? '' : 'none';
-        if (opening) {
-          const tossed = age >= 2.4;
-          egg.top.setAttribute('transform', reducedMotion ? 'translate(43 15) rotate(110)' :
-            tossed ? 'translate(43 15) rotate(110)' : 'translate(12 -35) rotate(25)');
+          if (flight > 0 && !shellGone) {
+            // Fly above the flock; both pieces shrink into the counter together.
+            const progress = flight * flight * (3 - 2 * flight);
+            const x = egg.x + (counterTarget.x - egg.x) * progress;
+            const y = egg.y + (counterTarget.y - egg.y) * progress;
+            const scale = 1 - .5 * progress;
+            const transform = `translate(${x} ${y}) scale(${scale})`;
+            egg.node.setAttribute('transform', transform);
+            egg.capNode.setAttribute('transform', transform);
+            if (reducedMotion) {
+              // Keep the same arrival timing without a sweeping animation.
+              egg.node.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
+              egg.capNode.setAttribute('transform', `translate(${egg.x} ${egg.y})`);
+              egg.node.style.opacity = egg.capNode.style.opacity = String(1 - flight);
+            }
+          }
+          egg.node.style.display = shellGone ? 'none' : '';
+          egg.whole.style.display = opening ? 'none' : '';
+          egg.whole.setAttribute('href', hatching ? '#cracked-egg' : '#egg');
+          // The egg first appears under the hen, then stays fixed in place.
+          const shake = !reducedMotion && age >= 1.3 && !opening ? Math.sin((age - 1.3) * 36) * 11 : 0;
+          const eggScale = age < .04 && !reducedMotion ? .4 : 1;
+          egg.whole.setAttribute('transform', `rotate(${shake} 0 30) translate(0 30) scale(${eggScale}) translate(0 -30)`);
+          egg.capNode.style.display = opening && !shellGone ? '' : 'none';
+          egg.bottom.style.display = opening && !shellGone ? '' : 'none';
+          egg.chickNode.style.display = emerging ? '' : 'none';
+          if (opening) {
+            const tossed = age >= 2.4;
+            egg.top.setAttribute('transform', reducedMotion ? 'translate(43 15) rotate(110)' :
+              tossed ? 'translate(43 15) rotate(110)' : 'translate(12 -35) rotate(25)');
+          }
         }
         if (emerging) {
           const jump = Math.max(0, Math.min(1, (age - hatchJumpStart) / (hatchJumpEnd - hatchJumpStart)));
           const clearOfRim = jump >= .2;
           const stepping = hatched && !reducedMotion && Math.floor(egg.walker.walkTime / .16) % 2 === 1;
-          egg.chick.setAttribute('href', !clearOfRim ? '#chick-body' : stepping ? '#chick-step' : '#chick');
+          const pose = !clearOfRim ? '#chick-body' : stepping ? '#chick-step' : '#chick';
+          if (egg.pose !== pose) { egg.chick.setAttribute('href', pose); egg.pose = pose; }
           // While inside the shell, only the head above the rim is visible.
           // Hide feet and clip the body so neither can leak beneath the shell.
-          if (clearOfRim) egg.chick.removeAttribute('clip-path');
-          else egg.chick.setAttribute('clip-path', 'url(#chick-in-shell)');
+          if (egg.clearOfRim !== clearOfRim) {
+            if (clearOfRim) egg.chick.removeAttribute('clip-path');
+            else egg.chick.setAttribute('clip-path', 'url(#chick-in-shell)');
+            egg.clearOfRim = clearOfRim;
+          }
           const size = .85;
           const peek = age < hatchJumpStart ? -8 * Math.sin(Math.PI * (age - 2.4) / .4) : 0;
           const lift = reducedMotion ? 0 : Math.max(chickBounds.top - egg.walker.y, peek - 70 * Math.sin(Math.PI * jump));
           egg.chickNode.setAttribute('transform', `translate(${egg.walker.x} ${egg.walker.y + lift})`);
-          egg.chick.setAttribute('transform', `scale(${egg.walker.direction * size} ${size})`);
+          if (egg.renderDirection !== egg.walker.direction) {
+            egg.chick.setAttribute('transform', `scale(${egg.walker.direction * size} ${size})`);
+            egg.renderDirection = egg.walker.direction;
+          }
         }
       });
       // SVG paints in document order. Sort by feet on the ground, not hop height.
-      const layers = [...eggs.flatMap(egg => [
+      const layers = [...eggs.flatMap(egg => egg.collected ? [
+        { node: egg.chickNode, depth: egg.walker.y + 27 }
+      ] : [
         { node: egg.chickNode, depth: egg.walker.y + 27 },
         // At equal depth the shell lip sits in front of its emerging chick.
         { node: egg.node, depth: activeTime - egg.born >= shellFlightStart ? Infinity : egg.y + 30 },

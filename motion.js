@@ -1,5 +1,74 @@
 // Circular body bounds keep separation independent of the two walking poses.
 (() => {
+  // Pair signed cell coordinates without allocating strings for each lookup.
+  function cellKey(x, y) {
+    x = x >= 0 ? 2 * x : -2 * x - 1;
+    y = y >= 0 ? 2 * y : -2 * y - 1;
+    return (x + y) * (x + y + 1) / 2 + y;
+  }
+
+  class SpatialGrid {
+    constructor(birds) {
+      this.birds = birds;
+      this.cells = new Map();
+      this.keys = [];
+      this.maxRadius = 0;
+      birds.forEach((bird, index) => {
+        this.maxRadius = Math.max(this.maxRadius, bird.radius || 0);
+        this.update(index);
+      });
+    }
+
+    update(index) {
+      const bird = this.birds[index];
+      const key = cellKey(Math.floor(bird.x / 64), Math.floor(bird.y / 64));
+      const old = this.keys[index];
+      if (old === key) return;
+      if (old !== undefined) {
+        const bucket = this.cells.get(old);
+        bucket.delete(index);
+        if (!bucket.size) this.cells.delete(old);
+      }
+      if (!this.cells.has(key)) this.cells.set(key, new Set());
+      this.cells.get(key).add(index);
+      this.keys[index] = key;
+    }
+
+    range(x, y, radius) {
+      return `${Math.floor((x - radius) / 64)},${Math.floor((x + radius) / 64)},${Math.floor((y - radius) / 64)},${Math.floor((y + radius) / 64)}`;
+    }
+
+    indices(x, y, radius, exact = true, after = -1) {
+      const matches = new Uint32Array(Math.ceil(this.birds.length / 32));
+      const result = [];
+      for (let row = Math.floor((y - radius) / 64); row <= Math.floor((y + radius) / 64); row++) {
+        for (let column = Math.floor((x - radius) / 64); column <= Math.floor((x + radius) / 64); column++) {
+          const bucket = this.cells.get(cellKey(column, row));
+          if (bucket) for (const index of bucket) {
+            if (index <= after) continue;
+            const bird = this.birds[index];
+            if (!exact || (Math.abs(bird.x - x) <= radius && Math.abs(bird.y - y) <= radius)) matches[index >>> 5] |= 1 << (index & 31);
+          }
+        }
+      }
+      // Stable order keeps collision resolution and steering deterministic.
+      // A bitset emits indices in order without sorting the dense candidate lists.
+      for (let word = (after + 1) >>> 5; word < matches.length; word++) {
+        let bits = matches[word];
+        while (bits) {
+          const bit = 31 - Math.clz32(bits & -bits);
+          result.push(word * 32 + bit);
+          bits &= bits - 1;
+        }
+      }
+      return result;
+    }
+
+    query(x, y, radius) {
+      return this.indices(x, y, radius).map(index => this.birds[index]);
+    }
+  }
+
   function wanderTarget(bird, minDistance, maxDistance, random = Math.random) {
     // Pick a heading first: sampling positions in a wide rectangle biases travel.
     const angle = random() * Math.PI * 2;
@@ -12,6 +81,8 @@
   }
 
   function chickWanderTarget(bird, neighbors, random = Math.random) {
+    // Maximum travel (110) plus the endpoint's crowd-sensing radius (85).
+    if (neighbors instanceof SpatialGrid) neighbors = neighbors.query(bird.x, bird.y, 195);
     let best, bestScore = Infinity;
     for (let i = 0; i < 8; i++) {
       const point = wanderTarget(bird, 55, 110, random);
@@ -29,6 +100,7 @@
   }
 
   function crowdEscapeTarget(bird, neighbors, random = Math.random) {
+    if (neighbors instanceof SpatialGrid) neighbors = neighbors.query(bird.x, bird.y, 300);
     if (neighbors.filter(other => Math.hypot(other.x - bird.x, other.y - bird.y) < 130).length < 3) return null;
     const pressure = point => neighbors.reduce((sum, other) => {
       const proximity = Math.max(0, 1 - Math.hypot(other.x - point.x, other.y - point.y) / 180);
@@ -58,18 +130,29 @@
   }
 
   function separate(birds) {
+    let lastMoving = -1;
+    birds.forEach((bird, index) => { if (!bird.fixed) lastMoving = index; });
+    if (lastMoving < 0) return;
+    const grid = new SpatialGrid(birds);
     // Several small constraint passes also handle groups pressed against edges.
     for (let pass = 0; pass < 8; pass++) {
       let overlap = false;
       for (let i = 0; i < birds.length; i++) {
-        for (let j = i + 1; j < birds.length; j++) {
-          const a = birds[i], b = birds[j];
+        const a = birds[i];
+        // Eggs are immovable; skip rows containing only fixed/fixed pairs.
+        if (a.fixed && i >= lastMoving) continue;
+        const reach = (a.radius + grid.maxRadius) * .85;
+        let range = grid.range(a.x, a.y, reach);
+        let candidates = grid.indices(a.x, a.y, reach, false, i);
+        for (let candidate = 0; candidate < candidates.length; candidate++) {
+          const j = candidates[candidate], b = birds[j];
           if (a.fixed && b.fixed) continue;
           const dx = b.x - a.x, dy = b.y - a.y;
-          const distance = Math.hypot(dx, dy);
           // Bodies can nestle together; only their smaller cores cannot cross.
           const minimum = (a.radius + b.radius) * .85;
-          if (distance >= minimum) continue;
+          const squaredDistance = dx * dx + dy * dy;
+          if (squaredDistance >= minimum * minimum) continue;
+          const distance = Math.sqrt(squaredDistance);
           overlap = true;
           // Deterministic escape direction for chicks hatching at the same spot.
           const angle = (i + j * 2.4) * 2.4;
@@ -92,6 +175,15 @@
           b.x += nx * push * (1 - share); b.y += ny * push * (1 - share);
           if (!a.fixed) clamp(a);
           if (!b.fixed) clamp(b);
+          grid.update(i); grid.update(j);
+          // The candidate list covers whole cells, so only query again when a
+          // push changes the cell range. This preserves sequential pair ordering.
+          const nextRange = grid.range(a.x, a.y, reach);
+          if (nextRange !== range) {
+            range = nextRange;
+            candidates = grid.indices(a.x, a.y, reach, false, j);
+            candidate = -1;
+          }
         }
       }
       if (!overlap) break;
@@ -104,6 +196,7 @@
     const steps = Math.ceil(dt / (1 / 120));
     const tick = dt / steps;
     for (let s = 0; s < steps; s++) {
+      const grid = new SpatialGrid(birds);
       const velocities = birds.map((bird, index) => {
         if (bird.fixed) return { x: 0, y: 0 };
         const dx = bird.target ? bird.target.x - bird.x : 0;
@@ -112,8 +205,9 @@
         let vx = distance > 2 ? dx / distance * bird.speed : 0;
         let vy = distance > 2 ? dy / distance * bird.speed : 0;
         let nearbyChicks = 0;
-        birds.forEach((other, otherIndex) => {
+        grid.indices(bird.x, bird.y, Math.max(80, bird.radius + grid.maxRadius + 10)).forEach(otherIndex => {
           if (index === otherIndex) return;
+          const other = birds[otherIndex];
           const ox = bird.x - other.x, oy = bird.y - other.y;
           const gap = Math.hypot(ox, oy);
           const contact = bird.radius + other.radius;
@@ -178,7 +272,7 @@
     }
   }
 
-  const api = { step, separate, wanderTarget, chickWanderTarget, crowdEscapeTarget };
+  const api = { SpatialGrid, step, separate, wanderTarget, chickWanderTarget, crowdEscapeTarget };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else globalThis.ChickenMotion = api;
 })();
