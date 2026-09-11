@@ -12,7 +12,7 @@ python3 -m http.server 8000
 
 Then visit http://localhost:8000. No dependencies or build step.
 
-On phones up to 600px wide, the rounded play area fills the available viewport with a small margin. A narrower, taller SVG world makes the birds larger and lets them roam across the portrait area. Resizing preserves the flock and active hops; desktop keeps the original landscape layout.
+On narrow screens and landscape phones, the rounded play area fills the available viewport with a small margin. The SVG world keeps its shorter side at 400 units, making the birds larger in either orientation. Resizing preserves the flock and active hops; desktop keeps the original landscape layout.
 
 The game has no visible words. SVG speaker and restart buttons retain accessible labels for screen readers. At startup (and after restart), pictures of a pressed spacebar, left mouse button, and tapping hand replace the counter. Laying the first egg hides the pictures and reveals the counter. After each chick hatches, its shell pieces fly into the counter and add one on arrival. Comic Neue Bold is bundled in `assets/fonts` for the counter, with its SIL Open Font License; the game makes no font requests to external services.
 

@@ -23,7 +23,7 @@ main { width: 100%; max-width: 1080px; }
 #sound[aria-pressed="false"] .sound-muted { display: block; }
 #playfield:focus { outline: none; }
 .game-controls button:focus-visible { outline: 2px solid white; outline-offset: -5px; }
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 600px) and (pointer: coarse) {
   body { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); height: 100svh; height: 100dvh; min-height: 0; }
   main { height: 100%; min-height: 0; }
   .game-shell { height: 100%; aspect-ratio: auto; border-radius: 18px; }

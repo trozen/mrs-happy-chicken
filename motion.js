@@ -77,7 +77,10 @@
     const { left, right, top, bottom } = bird.bounds;
     if (bird.x + dx < left || bird.x + dx > right) dx = -dx;
     if (bird.y + dy < top || bird.y + dy > bottom) dy = -dy;
-    return { x: bird.x + dx, y: bird.y + dy };
+    // On a narrow board neither full-length direction may fit. Shorten the
+    // reflected route so the bird can actually reach and clear its target.
+    return { x: Math.max(left, Math.min(right, bird.x + dx)),
+      y: Math.max(top, Math.min(bottom, bird.y + dy)) };
   }
 
   function chickWanderTarget(bird, neighbors, random = Math.random) {

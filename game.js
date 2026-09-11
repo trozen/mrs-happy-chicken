@@ -24,8 +24,9 @@
   let world = { left: 0, width: 1000, height: 640 };
   function resizeWorld() {
     const rect = shell.getBoundingClientRect();
-    const mobile = matchMedia('(max-width: 600px)').matches;
-    const width = mobile ? 400 : 1000;
+    const mobile = matchMedia('(max-width: 600px), (max-height: 600px) and (pointer: coarse)').matches;
+    // Keep the same sprite scale relative to the short side after rotation.
+    const width = mobile ? 400 * Math.max(1, rect.width / rect.height) : 1000;
     const next = { left: (1000 - width) / 2, width, height: width * rect.height / rect.width };
     if (next.width === world.width && next.height === world.height) return;
     const previous = world;
@@ -42,16 +43,28 @@
       point.x = world.left + (point.x - previous.left) * world.width / previous.width;
       point.y *= world.height / previous.height;
     };
+    const constrain = (point, bounds) => {
+      if (!point) return;
+      point.x = Math.max(bounds.left, Math.min(bounds.right, point.x));
+      point.y = Math.max(bounds.top, Math.min(bounds.bottom, point.y));
+    };
     const moveBird = bird => {
       move(bird); move(bird.target);
-      bird.x = Math.max(bird.bounds.left, Math.min(bird.bounds.right, bird.x));
-      bird.y = Math.max(bird.bounds.top, Math.min(bird.bounds.bottom, bird.y));
+      constrain(bird, bird.bounds);
+      constrain(bird.target, bird.bounds);
     };
     moveBird(hen);
-    if (hen.hop) { move(hen.hop.from); move(hen.hop.to); }
+    if (hen.hop) {
+      move(hen.hop.from); move(hen.hop.to);
+      constrain(hen.hop.from, henBounds); constrain(hen.hop.to, henBounds);
+      hen.target = onwardTarget(hen.hop.from, hen.hop.to);
+    }
     eggs.forEach(egg => {
       move(egg); move(egg.collider); moveBird(egg.walker);
-      if (egg.exitHop) { move(egg.exitHop.from); move(egg.exitHop.to); }
+      if (egg.exitHop) {
+        move(egg.exitHop.from); move(egg.exitHop.to);
+        constrain(egg.exitHop.to, chickBounds);
+      }
     });
   }
   resizeWorld();
@@ -129,6 +142,7 @@
 
   function onwardTarget(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
+    if (Math.hypot(dx, dy) < .001) return null;
     const toXEdge = dx > 0 ? (henBounds.right - to.x) / dx : dx < 0 ? (henBounds.left - to.x) / dx : Infinity;
     const toYEdge = dy > 0 ? (henBounds.bottom - to.y) / dy : dy < 0 ? (henBounds.top - to.y) / dy : Infinity;
     const distance = Math.max(0, Math.min(toXEdge, toYEdge));
@@ -230,8 +244,8 @@
         if (hopProgress === 1) {
           hen.hop = null;
           const distance = Math.hypot(to.x - from.x, to.y - from.y);
-          hen.vx = (to.x - from.x) / distance * hen.speed;
-          hen.vy = (to.y - from.y) / distance * hen.speed;
+          hen.vx = distance > .001 ? (to.x - from.x) / distance * hen.speed : 0;
+          hen.vy = distance > .001 ? (to.y - from.y) / distance * hen.speed : 0;
         }
       }
       const walking = !wasHopping && layAge >= layDuration;

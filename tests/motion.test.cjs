@@ -255,3 +255,25 @@ test('dense candidate queries preserve pair order across 32-bit boundaries', () 
       birds.map((_, i) => i).filter(i => i > after));
   }
 });
+
+test('wandering stays reachable when neither full-length direction fits', () => {
+  for (const bounds of [
+    { left: 374, right: 626, top: 80, bottom: 750 },
+    { left: 74, right: 926, top: 80, bottom: 170 }
+  ]) {
+    const mother = bird((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2, null, true);
+    mother.bounds = bounds;
+    for (let heading = 0; heading < 64; heading++) {
+      let call = 0;
+      const target = wanderTarget(mother, 70, 140, () => call++ ? .999 : heading / 64);
+      assert.ok(target.x >= bounds.left && target.x <= bounds.right);
+      assert.ok(target.y >= bounds.top && target.y <= bounds.bottom);
+    }
+  }
+  const mother = bird(500, 320, null, true);
+  mother.bounds = { left: 374, right: 626, top: 80, bottom: 750 };
+  let call = 0;
+  mother.target = wanderTarget(mother, 70, 140, () => call++ ? .999 : 0);
+  for (let frame = 0; frame < 300; frame++) step([mother], 1 / 60);
+  assert.equal(mother.target, null, 'The mother must reach her target instead of walking against the wall');
+});
